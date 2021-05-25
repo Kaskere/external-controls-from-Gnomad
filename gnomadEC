@@ -1,0 +1,50 @@
+
+#!/bin/bash -x
+
+
+
+#PBS -N bcftools_awk
+#PBS -q batch
+#PBS -l walltime=72:00:00
+#PBS -l nodes=1:ppn=4
+#PBS -l feature=largescratch
+#PBS -j oe
+####PBS -A
+#PBS -o rsu
+
+
+
+
+inpath=/home/groups/dir
+outpath=/home/groups/outdir
+outpath1=/home/groups/outdir1
+bed=/home/groups/dir/beds/Twist_ComprehensiveExome_targets_hg38-2bp.bed
+mkdir $outpath
+chmod u+rwx $outpath
+mkdir $outpath1
+chmod u+rwx $outpath1
+
+
+cd $inpath
+
+module load  bio/bcftools/1.10.2
+
+for file in $inpath/gnomad.genomes.v3.1.sites.chrX.vcf.bgz ;    
+### chromosome VCFs has to be downloaded one by one from gnomad v3.1 
+do
+        sample=$(basename $file ".vcf.bgz")
+        outfile1=$outpath/$sample".viewed.txt"
+        awk1=$outpath/$sample".awk1.txt"
+        awk2=$outpath/$sample".awk2.txt"
+        echo outputs are $sample $outfile1 $awk1 $awk2
+        outfile=$outpath1/$sample"nfeXX.txt"
+        bcftools view $file -R $bed -f PASS -o $outfile1
+        ###references has to be picked indvidually - in this case nfeXX stands for non Finnish European women, as women exomes will be analysed
+        awk '{gsub(/AC-nfe-XX/,"ACnfeXX")}1'  $outfile1 > $awk1
+
+        awk '{gsub(/AN-nfe-XX/,"ANnfeXX")}1'  $awk1 >  $awk2
+
+        bcftools query -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%INFO/ACnfeXX\t%INFO/ANnfeXX\n' $awk2 > $outfile
+done
+
+ 
